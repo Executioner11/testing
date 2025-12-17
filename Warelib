@@ -170,7 +170,7 @@ local function showNotification(text,duration)
 	notif.ClipsDescendants = true
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1,-20,1,-15) -- move text away from borders
+	label.Size = UDim2.new(1,-20,1,-15)
 	label.Position = UDim2.new(0,10,0,5)
 	label.BackgroundTransparency = 1
 	label.Text = text
@@ -207,7 +207,7 @@ local function showNotification(text,duration)
 	end)
 end
 
--- Fluent-style toggle
+-- Fluent-style toggle (mobile-compatible)
 local function createToggle(parent, labelText, defaultState, callback)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -216,7 +216,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.6,0,1,0)
-	label.Position = UDim2.new(0,10,0,0) -- move text slightly inward
+	label.Position = UDim2.new(0,15,0,0) -- closer to toggle
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -225,7 +225,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 	label.TextSize = 16
 	label.Parent = frame
 
-	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-70,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
+	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-65,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
 	local toggleCircle = createRoundedFrame(toggleFrame, UDim2.new(0,21,0,21), UDim2.new(defaultState and 1 or 0,0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
 	toggleCircle.AnchorPoint = Vector2.new(defaultState and 1 or 0,0.5)
 
@@ -239,17 +239,20 @@ local function createToggle(parent, labelText, defaultState, callback)
 		if callback then callback(toggled) end
 	end
 
-	-- Works for both mouse and touch
+	-- Works for Mouse and Touch
 	toggleFrame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			updateToggle(not toggled)
 		end
 	end)
+	toggleFrame.TouchTap:Connect(function()
+		updateToggle(not toggled)
+	end)
 
 	return frame
 end
 
--- Smooth slider
+-- Smooth slider (mobile-compatible)
 local function createSlider(parent,labelText,min,max,default)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -257,8 +260,8 @@ local function createSlider(parent,labelText,min,max,default)
 	frame.Parent = parent
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.4,0,1,0)
-	label.Position = UDim2.new(0,10,0,0)
+	label.Size = UDim2.new(0.35,0,1,0) -- label closer to slider
+	label.Position = UDim2.new(0,15,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -268,7 +271,7 @@ local function createSlider(parent,labelText,min,max,default)
 	label.Parent = frame
 
 	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Size = UDim2.new(0.2,0,1,0)
+	valueLabel.Size = UDim2.new(0.15,0,1,0)
 	valueLabel.Position = UDim2.new(0.8,0,0,0)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = TEXT_COLOR
@@ -278,24 +281,39 @@ local function createSlider(parent,labelText,min,max,default)
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 	valueLabel.Parent = frame
 
-	local sliderBar = createRoundedFrame(frame, UDim2.new(0.6,0,0.3,0), UDim2.new(0.4,0,0.35,0), SLIDER_BG_COLOR,0, UDim.new(0,4))
+	local sliderBar = createRoundedFrame(frame, UDim2.new(0.5,0,0.3,0), UDim2.new(0.4,0,0.35,0), SLIDER_BG_COLOR,0, UDim.new(0,4))
 	local sliderKnob = createRoundedFrame(sliderBar, UDim2.new(0,20,0,20), UDim2.new((default-min)/(max-min),0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
 	sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
 
 	local dragging=false
+
+	local function updateSlider(inputPosX)
+		local relative = math.clamp((inputPosX-sliderBar.AbsolutePosition.X)/sliderBar.AbsoluteSize.X,0,1)
+		TweenService:Create(sliderKnob,TweenInfo.new(0.1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.new(relative,0,0.5,0)}):Play()
+		valueLabel.Text = tostring(math.floor(min + relative*(max-min)))
+	end
+
+	-- PC drag
 	sliderKnob.InputBegan:Connect(function(input)
-		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dragging=true end
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true end
 	end)
 	sliderKnob.InputEnded:Connect(function(input)
-		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dragging=false end
+		if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end
 	end)
 	UIS.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
-			local rel = math.clamp((input.Position.X-sliderBar.AbsolutePosition.X)/sliderBar.AbsoluteSize.X,0,1)
-			TweenService:Create(sliderKnob,TweenInfo.new(0.1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.new(rel,0,0.5,0)}):Play()
-			valueLabel.Text = tostring(math.floor(min + rel*(max-min)))
+		if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
+			updateSlider(input.Position.X)
 		end
 	end)
+
+	-- Mobile drag
+	local function mobileDrag(input)
+		if input.UserInputType == Enum.UserInputType.Touch then
+			updateSlider(input.Position.X)
+		end
+	end
+	sliderBar.InputBegan:Connect(mobileDrag)
+	sliderBar.InputChanged:Connect(mobileDrag)
 end
 
 -- Demo
