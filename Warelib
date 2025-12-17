@@ -216,7 +216,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.6,0,1,0)
-	label.Position = UDim2.new(0,15,0,0) -- closer to toggle
+	label.Position = UDim2.new(0,15,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -239,7 +239,6 @@ local function createToggle(parent, labelText, defaultState, callback)
 		if callback then callback(toggled) end
 	end
 
-	-- Works for Mouse and Touch
 	toggleFrame.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			updateToggle(not toggled)
@@ -252,7 +251,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 	return frame
 end
 
--- Smooth slider (mobile-compatible)
+-- Smooth slider with smaller knob
 local function createSlider(parent,labelText,min,max,default)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -260,7 +259,7 @@ local function createSlider(parent,labelText,min,max,default)
 	frame.Parent = parent
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.35,0,1,0) -- label closer to slider
+	label.Size = UDim2.new(0.35,0,1,0)
 	label.Position = UDim2.new(0,15,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
@@ -282,7 +281,10 @@ local function createSlider(parent,labelText,min,max,default)
 	valueLabel.Parent = frame
 
 	local sliderBar = createRoundedFrame(frame, UDim2.new(0.5,0,0.3,0), UDim2.new(0.4,0,0.35,0), SLIDER_BG_COLOR,0, UDim.new(0,4))
-	local sliderKnob = createRoundedFrame(sliderBar, UDim2.new(0,20,0,20), UDim2.new((default-min)/(max-min),0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
+
+	-- Smaller knob, just outside slider
+	local knobSize = 12
+	local sliderKnob = createRoundedFrame(sliderBar, UDim2.new(0,knobSize,0,knobSize), UDim2.new((default-min)/(max-min),0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
 	sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
 
 	local dragging=false
