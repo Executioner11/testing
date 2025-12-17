@@ -40,13 +40,15 @@ local function createRoundedFrame(parent, size, pos, bgColor, bgTransparency, co
 	return frame
 end
 
--- Draggable Window Function (supports mouse & mobile)
+-- Mobile and PC draggable window
 local function makeDraggable(window, dragArea)
-	local dragging, dragStart, startPos, dragInput = false
-	local UIS = game:GetService("UserInputService")
+	local dragging = false
+	local dragStart = Vector2.new()
+	local startPos = UDim2.new()
+	local dragInput
 
-	local function update(input)
-		local delta = input.Position - dragStart
+	local function update(inputPos)
+		local delta = inputPos - dragStart
 		window.Position = UDim2.new(
 			startPos.X.Scale, startPos.X.Offset + delta.X,
 			startPos.Y.Scale, startPos.Y.Offset + delta.Y
@@ -58,6 +60,7 @@ local function makeDraggable(window, dragArea)
 			dragging = true
 			dragStart = input.Position
 			startPos = window.Position
+			dragInput = input
 
 			input.Changed:Connect(function()
 				if input.UserInputState == Enum.UserInputState.End then
@@ -68,14 +71,14 @@ local function makeDraggable(window, dragArea)
 	end)
 
 	dragArea.InputChanged:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		if input == dragInput then
 			dragInput = input
 		end
 	end)
 
 	UIS.InputChanged:Connect(function(input)
-		if input == dragInput and dragging then
-			update(input)
+		if dragging and input == dragInput then
+			update(input.Position)
 		end
 	end)
 end
@@ -107,10 +110,10 @@ local function createWindow(title)
 	CloseButton.TextSize = 18
 	CloseButton.Parent = TitleBar
 	CloseButton.MouseButton1Click:Connect(function()
-		Window:Destroy()
+		Window.Visible = false
 	end)
 
-	-- Make draggable
+	-- Make window draggable
 	makeDraggable(Window, TitleBar)
 
 	-- Tabs
@@ -336,8 +339,37 @@ local function createSlider(parent,labelText,min,max,default)
 	sliderBar.InputChanged:Connect(mobileDrag)
 end
 
--- Demo
+-- Create a draggable left-side toggle button for opening/closing UI
+local function createToggleButton(window)
+    local button = createRoundedFrame(UI, UDim2.new(0,40,0,100), UDim2.new(0,0,0.5,-50), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,10))
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1,0,1,0)
+    label.Position = UDim2.new(0,0,0,0)
+    label.BackgroundTransparency = 1
+    label.Text = "☰"
+    label.TextColor3 = TEXT_COLOR
+    label.Font = Enum.Font.SourceSansBold
+    label.TextSize = 24
+    label.Parent = button
+    label.TextScaled = true
+
+    -- Make the button draggable
+    makeDraggable(button, button)
+
+    -- Toggle functionality
+    local uiVisible = true
+    button.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            uiVisible = not uiVisible
+            window.Visible = uiVisible
+        end
+    end)
+end
+
+-- Demo usage
 local win, addTab = createWindow("Demo Window")
+createToggleButton(win)
+
 local tab1 = addTab("Main")
 local tab2 = addTab("Misc")
 local tab3 = addTab("Settings")
