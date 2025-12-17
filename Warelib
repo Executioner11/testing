@@ -23,7 +23,7 @@ local function tween(obj, props, time, style, dir)
 	return TweenService:Create(obj, TweenInfo.new(time, style, dir), props)
 end
 
--- Utility: create rounded frame
+-- Rounded Frame Utility
 local function createRoundedFrame(parent, size, pos, bgColor, bgTransparency, cornerRadius)
 	local frame = Instance.new("Frame")
 	frame.Size = size
@@ -40,7 +40,7 @@ local function createRoundedFrame(parent, size, pos, bgColor, bgTransparency, co
 	return frame
 end
 
--- Mobile and PC draggable window
+-- Draggable window
 local function makeDraggable(window, dragArea)
 	local dragging = false
 	local dragStart = Vector2.new()
@@ -83,9 +83,25 @@ local function makeDraggable(window, dragArea)
 	end)
 end
 
--- Window
+-- Slide animation
+local function slideInWindow(window, duration)
+	window.Position = UDim2.new(0.5, -window.AbsoluteSize.X/2, 1, 0)
+	window.Visible = true
+	local targetPos = UDim2.new(0.5, -window.AbsoluteSize.X/2, 0.5, -window.AbsoluteSize.Y/2)
+	tween(window, {Position = targetPos}, duration or 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out):Play()
+end
+
+local function slideOutWindow(window, duration)
+	local targetPos = UDim2.new(0.5, -window.AbsoluteSize.X/2, 1, 0)
+	local t = tween(window, {Position = targetPos}, duration or 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	t:Play()
+	t.Completed:Connect(function() window.Visible = false end)
+end
+
+-- Window creation
 local function createWindow(title)
-	local Window = createRoundedFrame(UI, UDim2.new(0,450,0,300), UDim2.new(0.5,-225,0.5,-150), Color3.fromRGB(0,0,0), 0.15, UDim.new(0,10))
+	local Window = createRoundedFrame(UI, UDim2.new(0,450,0,300), UDim2.new(0.5,-225,1,0), Color3.fromRGB(0,0,0), 0.15, UDim.new(0,10))
+	Window.Visible = false
 
 	-- Title Bar
 	local TitleBar = createRoundedFrame(Window, UDim2.new(1,0,0,30), UDim2.new(0,0,0,0), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,0))
@@ -110,10 +126,9 @@ local function createWindow(title)
 	CloseButton.TextSize = 18
 	CloseButton.Parent = TitleBar
 	CloseButton.MouseButton1Click:Connect(function()
-		Window.Visible = false
+		slideOutWindow(Window, 0.5)
 	end)
 
-	-- Make window draggable
 	makeDraggable(Window, TitleBar)
 
 	-- Tabs
@@ -228,7 +243,7 @@ local function showNotification(text,duration)
 	end)
 end
 
--- Fluent-style toggle (mobile-compatible)
+-- Toggle (mobile-friendly)
 local function createToggle(parent, labelText, defaultState, callback)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -272,7 +287,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 	return frame
 end
 
--- Smooth slider with smaller knob (mobile-compatible)
+-- Slider (mobile-friendly)
 local function createSlider(parent,labelText,min,max,default)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -302,8 +317,6 @@ local function createSlider(parent,labelText,min,max,default)
 	valueLabel.Parent = frame
 
 	local sliderBar = createRoundedFrame(frame, UDim2.new(0.5,0,0.3,0), UDim2.new(0.4,0,0.35,0), SLIDER_BG_COLOR,0, UDim.new(0,4))
-
-	-- Smaller knob, just outside slider
 	local knobSize = 12
 	local sliderKnob = createRoundedFrame(sliderBar, UDim2.new(0,knobSize,0,knobSize), UDim2.new((default-min)/(max-min),0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
 	sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
@@ -316,7 +329,6 @@ local function createSlider(parent,labelText,min,max,default)
 		valueLabel.Text = tostring(math.floor(min + relative*(max-min)))
 	end
 
-	-- PC drag
 	sliderKnob.InputBegan:Connect(function(input)
 		if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true end
 	end)
@@ -329,7 +341,6 @@ local function createSlider(parent,labelText,min,max,default)
 		end
 	end)
 
-	-- Mobile drag
 	local function mobileDrag(input)
 		if input.UserInputType == Enum.UserInputType.Touch then
 			updateSlider(input.Position.X)
@@ -339,34 +350,36 @@ local function createSlider(parent,labelText,min,max,default)
 	sliderBar.InputChanged:Connect(mobileDrag)
 end
 
--- Create a draggable left-side toggle button for opening/closing UI
+-- Left-side toggle button
 local function createToggleButton(window)
-    local button = createRoundedFrame(UI, UDim2.new(0,40,0,100), UDim2.new(0,0,0.5,-50), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,10))
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1,0,1,0)
-    label.Position = UDim2.new(0,0,0,0)
-    label.BackgroundTransparency = 1
-    label.Text = "☰"
-    label.TextColor3 = TEXT_COLOR
-    label.Font = Enum.Font.SourceSansBold
-    label.TextSize = 24
-    label.Parent = button
-    label.TextScaled = true
+	local button = createRoundedFrame(UI, UDim2.new(0,40,0,100), UDim2.new(0,0,0.5,-50), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,10))
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(1,0,1,0)
+	label.Position = UDim2.new(0,0,0,0)
+	label.BackgroundTransparency = 1
+	label.Text = "☰"
+	label.TextColor3 = TEXT_COLOR
+	label.Font = Enum.Font.SourceSansBold
+	label.TextSize = 24
+	label.Parent = button
+	label.TextScaled = true
 
-    -- Make the button draggable
-    makeDraggable(button, button)
+	makeDraggable(button, button)
 
-    -- Toggle functionality
-    local uiVisible = true
-    button.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            uiVisible = not uiVisible
-            window.Visible = uiVisible
-        end
-    end)
+	local uiVisible = false
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			uiVisible = not uiVisible
+			if uiVisible then
+				slideInWindow(window, 0.5)
+			else
+				slideOutWindow(window, 0.5)
+			end
+		end
+	end)
 end
 
--- Demo usage
+-- =================== Demo Usage ===================
 local win, addTab = createWindow("Demo Window")
 createToggleButton(win)
 
@@ -376,7 +389,9 @@ local tab3 = addTab("Settings")
 
 createSlider(tab1,"Volume",0,100,50)
 createToggle(tab1,"Enable Feature",false,function(state) showNotification("Feature is "..(state and "ON" or "OFF"),3) end)
+
 createSlider(tab2,"Brightness",0,100,75)
 createToggle(tab2,"Misc Toggle",true,function(state) showNotification("Misc Toggle "..(state and "ON" or "OFF"),3) end)
+
 createSlider(tab3,"Sensitivity",1,10,5)
 createToggle(tab3,"Settings Toggle",false,function(state) showNotification("Settings Toggle "..(state and "ON" or "OFF"),3) end)
