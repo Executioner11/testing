@@ -10,7 +10,6 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 local TEXT_COLOR = Color3.fromRGB(255,255,255)
 local SLIDER_COLOR = Color3.fromRGB(100,200,255)
 local SLIDER_BG_COLOR = Color3.fromRGB(60,60,60)
-local BUTTON_COLOR = Color3.fromRGB(80,80,80)
 
 local UI = Instance.new("ScreenGui")
 UI.Name = "FluentNockoff"
@@ -105,11 +104,11 @@ local function createWindow(title)
 
 		local layout = Instance.new("UIListLayout")
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Padding = UDim.new(0,5)
+		layout.Padding = UDim.new(0,10)
 		layout.Parent = tabContent
 
 		layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			tabContent.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 5)
+			tabContent.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 		end)
 
 		local function activateTab()
@@ -171,8 +170,8 @@ local function showNotification(text,duration)
 	notif.ClipsDescendants = true
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1,-10,1,-15)
-	label.Position = UDim2.new(0,5,0,5)
+	label.Size = UDim2.new(1,-20,1,-15) -- move text away from borders
+	label.Position = UDim2.new(0,10,0,5)
 	label.BackgroundTransparency = 1
 	label.Text = text
 	label.TextColor3 = TEXT_COLOR
@@ -208,16 +207,58 @@ local function showNotification(text,duration)
 	end)
 end
 
+-- Fluent-style toggle
+local function createToggle(parent, labelText, defaultState, callback)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1,-20,0,40)
+	frame.BackgroundTransparency = 1
+	frame.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0.6,0,1,0)
+	label.Position = UDim2.new(0,10,0,0) -- move text slightly inward
+	label.BackgroundTransparency = 1
+	label.Text = labelText
+	label.TextColor3 = TEXT_COLOR
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 16
+	label.Parent = frame
+
+	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-70,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
+	local toggleCircle = createRoundedFrame(toggleFrame, UDim2.new(0,21,0,21), UDim2.new(defaultState and 1 or 0,0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
+	toggleCircle.AnchorPoint = Vector2.new(defaultState and 1 or 0,0.5)
+
+	local toggled = defaultState
+	local function updateToggle(state)
+		toggled = state
+		TweenService:Create(toggleCircle,TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+			Position = UDim2.new(state and 1 or 0,0,0.5,0),
+			AnchorPoint = Vector2.new(state and 1 or 0,0.5)
+		}):Play()
+		if callback then callback(toggled) end
+	end
+
+	-- Works for both mouse and touch
+	toggleFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			updateToggle(not toggled)
+		end
+	end)
+
+	return frame
+end
+
 -- Smooth slider
 local function createSlider(parent,labelText,min,max,default)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
-	frame.Position = UDim2.new(0,10,0,50)
 	frame.BackgroundTransparency = 1
 	frame.Parent = parent
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.new(0.4,0,1,0)
+	label.Position = UDim2.new(0,10,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -243,74 +284,18 @@ local function createSlider(parent,labelText,min,max,default)
 
 	local dragging=false
 	sliderKnob.InputBegan:Connect(function(input)
-		if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=true end
+		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dragging=true end
 	end)
 	sliderKnob.InputEnded:Connect(function(input)
-		if input.UserInputType==Enum.UserInputType.MouseButton1 then dragging=false end
+		if input.UserInputType==Enum.UserInputType.MouseButton1 or input.UserInputType==Enum.UserInputType.Touch then dragging=false end
 	end)
 	UIS.InputChanged:Connect(function(input)
-		if dragging and input.UserInputType==Enum.UserInputType.MouseMovement then
+		if dragging and (input.UserInputType==Enum.UserInputType.MouseMovement or input.UserInputType==Enum.UserInputType.Touch) then
 			local rel = math.clamp((input.Position.X-sliderBar.AbsolutePosition.X)/sliderBar.AbsoluteSize.X,0,1)
 			TweenService:Create(sliderKnob,TweenInfo.new(0.1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.new(rel,0,0.5,0)}):Play()
 			valueLabel.Text = tostring(math.floor(min + rel*(max-min)))
 		end
 	end)
-end
-
--- Button
-local function createButton(parent,text,callback)
-	local button = Instance.new("TextButton")
-	button.Size = UDim2.new(0.5,-10,0,40)
-	button.Position = UDim2.new(0,10,0,100)
-	button.BackgroundColor3 = BUTTON_COLOR
-	button.BorderSizePixel = 0
-	button.Text = text
-	button.TextColor3 = TEXT_COLOR
-	button.Font = Enum.Font.SourceSansBold
-	button.TextSize = 16
-	button.Parent = parent
-	button.MouseButton1Click:Connect(callback)
-end
-
--- Fluent-style toggle
-local function createToggle(parent, labelText, defaultState, callback)
-	local frame = Instance.new("Frame")
-	frame.Size = UDim2.new(1,-20,0,40)
-	frame.Position = UDim2.new(0,10,0,0)
-	frame.BackgroundTransparency = 1
-	frame.Parent = parent
-
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.6,0,1,0)
-	label.BackgroundTransparency = 1
-	label.Text = labelText
-	label.TextColor3 = TEXT_COLOR
-	label.TextXAlignment = Enum.TextXAlignment.Left
-	label.Font = Enum.Font.SourceSans
-	label.TextSize = 16
-	label.Parent = frame
-
-	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-60,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
-	local toggleCircle = createRoundedFrame(toggleFrame, UDim2.new(0,21,0,21), UDim2.new(defaultState and 1 or 0,0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
-	toggleCircle.AnchorPoint = Vector2.new(defaultState and 1 or 0,0.5)
-
-	local toggled = defaultState
-	local function updateToggle(state)
-		toggled = state
-		TweenService:Create(toggleCircle,TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
-			Position = UDim2.new(state and 1 or 0,0,0.5,0),
-			AnchorPoint = Vector2.new(state and 1 or 0,0.5)
-		}):Play()
-		if callback then callback(toggled) end
-	end
-
-	toggleFrame.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 then
-			updateToggle(not toggled)
-		end
-	end)
-
-	return frame
 end
 
 -- Demo
@@ -321,8 +306,7 @@ local tab3 = addTab("Settings")
 
 createSlider(tab1,"Volume",0,100,50)
 createToggle(tab1,"Enable Feature",false,function(state) showNotification("Feature is "..(state and "ON" or "OFF"),3) end)
-createButton(tab1,"Notify Me",function() showNotification("Button clicked!",5) end)
-createButton(tab2,"Misc Button",function() showNotification("Misc clicked!",4) end)
+createSlider(tab2,"Brightness",0,100,75)
 createToggle(tab2,"Misc Toggle",true,function(state) showNotification("Misc Toggle "..(state and "ON" or "OFF"),3) end)
-createButton(tab3,"Settings",function() showNotification("Settings clicked!",4) end)
+createSlider(tab3,"Sensitivity",1,10,5)
 createToggle(tab3,"Settings Toggle",false,function(state) showNotification("Settings Toggle "..(state and "ON" or "OFF"),3) end)
