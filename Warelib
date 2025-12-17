@@ -272,6 +272,47 @@ local function createButton(parent,text,callback)
 	button.MouseButton1Click:Connect(callback)
 end
 
+-- Fluent-style toggle
+local function createToggle(parent, labelText, defaultState, callback)
+	local frame = Instance.new("Frame")
+	frame.Size = UDim2.new(1,-20,0,40)
+	frame.Position = UDim2.new(0,10,0,0)
+	frame.BackgroundTransparency = 1
+	frame.Parent = parent
+
+	local label = Instance.new("TextLabel")
+	label.Size = UDim2.new(0.6,0,1,0)
+	label.BackgroundTransparency = 1
+	label.Text = labelText
+	label.TextColor3 = TEXT_COLOR
+	label.TextXAlignment = Enum.TextXAlignment.Left
+	label.Font = Enum.Font.SourceSans
+	label.TextSize = 16
+	label.Parent = frame
+
+	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-60,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
+	local toggleCircle = createRoundedFrame(toggleFrame, UDim2.new(0,21,0,21), UDim2.new(defaultState and 1 or 0,0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
+	toggleCircle.AnchorPoint = Vector2.new(defaultState and 1 or 0,0.5)
+
+	local toggled = defaultState
+	local function updateToggle(state)
+		toggled = state
+		TweenService:Create(toggleCircle,TweenInfo.new(0.2,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{
+			Position = UDim2.new(state and 1 or 0,0,0.5,0),
+			AnchorPoint = Vector2.new(state and 1 or 0,0.5)
+		}):Play()
+		if callback then callback(toggled) end
+	end
+
+	toggleFrame.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 then
+			updateToggle(not toggled)
+		end
+	end)
+
+	return frame
+end
+
 -- Demo
 local win, addTab = createWindow("Demo Window")
 local tab1 = addTab("Main")
@@ -279,6 +320,9 @@ local tab2 = addTab("Misc")
 local tab3 = addTab("Settings")
 
 createSlider(tab1,"Volume",0,100,50)
+createToggle(tab1,"Enable Feature",false,function(state) showNotification("Feature is "..(state and "ON" or "OFF"),3) end)
 createButton(tab1,"Notify Me",function() showNotification("Button clicked!",5) end)
 createButton(tab2,"Misc Button",function() showNotification("Misc clicked!",4) end)
+createToggle(tab2,"Misc Toggle",true,function(state) showNotification("Misc Toggle "..(state and "ON" or "OFF"),3) end)
 createButton(tab3,"Settings",function() showNotification("Settings clicked!",4) end)
+createToggle(tab3,"Settings Toggle",false,function(state) showNotification("Settings Toggle "..(state and "ON" or "OFF"),3) end)
