@@ -106,82 +106,7 @@ local function createWindow(title)
 
 	makeDraggable(Window,TitleBar)
 
-	-- Tabs
-	local TabsFrame = createRoundedFrame(Window,UDim2.new(1,0,0,30),UDim2.new(0,0,0,30),Color3.fromRGB(0,0,0),1)
-	local TabsScrolling = Instance.new("ScrollingFrame")
-	TabsScrolling.Size = UDim2.new(1,0,1,0)
-	TabsScrolling.BackgroundTransparency = 1
-	TabsScrolling.ScrollBarThickness = 6
-	TabsScrolling.Parent = TabsFrame
-	TabsScrolling.CanvasSize = UDim2.new(0,0,0,0)
-	local tabsLayout = Instance.new("UIListLayout",TabsScrolling)
-	tabsLayout.FillDirection = Enum.FillDirection.Horizontal
-	tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
-	tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	tabsLayout.Padding = UDim.new(0,10)
-
-	-- WHITE UNDERLINE BAR
-	local Underline = createRoundedFrame(TabsFrame,UDim2.new(0,0,0,2),UDim2.new(0,0,1,-2),Color3.fromRGB(255,255,255),0,UDim.new(0,0))
-
-	local CurrentTabContent
-	local Tabs = {}
-
-	local function addTab(name)
-		local tabButton = Instance.new("TextButton")
-		tabButton.Size = UDim2.new(0,100,1,0)
-		tabButton.BackgroundTransparency = 1
-		tabButton.Text = name
-		tabButton.Font = Enum.Font.SourceSans
-		tabButton.TextSize = 16
-		tabButton.TextColor3 = TEXT_COLOR
-		tabButton.Parent = TabsScrolling
-
-		local tabContent = Instance.new("ScrollingFrame")
-		tabContent.Size = UDim2.new(1,0,1,-60)
-		tabContent.Position = UDim2.new(0,0,0,60)
-		tabContent.BackgroundTransparency = 1
-		tabContent.Visible = false
-		tabContent.CanvasSize = UDim2.new(0,0,0,0)
-		tabContent.ScrollBarThickness = 6
-		tabContent.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
-		tabContent.Parent = Window
-
-		local layout = Instance.new("UIListLayout", tabContent)
-		layout.SortOrder = Enum.SortOrder.LayoutOrder
-		layout.Padding = UDim.new(0,10)
-		layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-			tabContent.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
-		end)
-
-		local function activateTab()
-			if CurrentTabContent then CurrentTabContent.Visible = false end
-			tabContent.Visible = true
-			CurrentTabContent = tabContent
-
-			-- Move underline
-			task.defer(function()
-				local textWidth = tabButton.TextBounds.X
-				local relativeX = tabButton.Position.X.Offset + (tabButton.Size.X.Offset - textWidth)/2
-				tween(Underline,{
-					Position = UDim2.new(0, relativeX, 1, -2),
-					Size = UDim2.new(0, textWidth, 0, 2)
-				},0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
-			end)
-		end
-
-		tabButton.MouseButton1Click:Connect(activateTab)
-		table.insert(Tabs, tabButton)
-
-		if #Tabs == 1 then
-			task.wait()
-			activateTab()
-		end
-
-		TabsScrolling.CanvasSize = UDim2.new(0, (#Tabs)*(tabButton.Size.X.Offset + 10),0,0)
-		return tabContent
-	end
-
-	return Window, addTab, Underline
+	return Window
 end
 
 -- NOTIFICATIONS
@@ -247,8 +172,8 @@ makeDraggable(OpenButton,OpenButton)
 
 local opened=false
 
--- CREATE WINDOW AND DEMO TABS
-local win, addTab, underline = createWindow("BlueWare")
+-- CREATE WINDOW
+local win = createWindow("BlueWare")
 
 OpenButton.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -256,10 +181,5 @@ OpenButton.InputBegan:Connect(function(input)
 		if opened then slideInWindow(win) else slideOutWindow(win) end
 	end
 end)
-
--- DEMO TABS
-addTab("Main")
-addTab("Misc")
-addTab("Settings")
 
 showNotification("BlueWare Loaded",3)
