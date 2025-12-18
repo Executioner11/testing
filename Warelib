@@ -8,22 +8,24 @@ local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local TEXT_COLOR = Color3.fromRGB(255,255,255)
-local SLIDER_COLOR = Color3.fromRGB(100,200,255)
+local BLUEWARE_BLUE = Color3.fromRGB(0,140,255)
+local SLIDER_COLOR = BLUEWARE_BLUE
 local SLIDER_BG_COLOR = Color3.fromRGB(60,60,60)
+local TOGGLE_BG_COLOR = Color3.fromRGB(50,50,50)
+local WINDOW_BG_COLOR = Color3.fromRGB(0,0,0)
 
 local UI = Instance.new("ScreenGui")
-UI.Name = "FluentNockoff"
+UI.Name = "BlueWare"
 UI.ResetOnSpawn = false
 UI.Parent = PlayerGui
 
-local Windows = {}
 local Notifications = {}
 
+-- UTILITY FUNCTIONS
 local function tween(obj, props, time, style, dir)
 	return TweenService:Create(obj, TweenInfo.new(time, style, dir), props)
 end
 
--- Rounded Frame Utility
 local function createRoundedFrame(parent, size, pos, bgColor, bgTransparency, cornerRadius)
 	local frame = Instance.new("Frame")
 	frame.Size = size
@@ -40,118 +42,102 @@ local function createRoundedFrame(parent, size, pos, bgColor, bgTransparency, co
 	return frame
 end
 
--- Draggable window
 local function makeDraggable(window, dragArea)
-	local dragging = false
-	local dragStart = Vector2.new()
-	local startPos = UDim2.new()
-	local dragInput
-
-	local function update(inputPos)
-		local delta = inputPos - dragStart
-		window.Position = UDim2.new(
-			startPos.X.Scale, startPos.X.Offset + delta.X,
-			startPos.Y.Scale, startPos.Y.Offset + delta.Y
-		)
-	end
-
+	local dragging, dragStart, startPos
 	dragArea.InputBegan:Connect(function(input)
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 			dragging = true
 			dragStart = input.Position
 			startPos = window.Position
-			dragInput = input
-
 			input.Changed:Connect(function()
-				if input.UserInputState == Enum.UserInputState.End then
-					dragging = false
-				end
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
 			end)
 		end
 	end)
-
-	dragArea.InputChanged:Connect(function(input)
-		if input == dragInput then
-			dragInput = input
-		end
-	end)
-
 	UIS.InputChanged:Connect(function(input)
-		if dragging and input == dragInput then
-			update(input.Position)
+		if dragging then
+			local delta = input.Position - dragStart
+			window.Position = UDim2.new(
+				startPos.X.Scale, startPos.X.Offset + delta.X,
+				startPos.Y.Scale, startPos.Y.Offset + delta.Y
+			)
 		end
 	end)
 end
 
--- Slide animation
-local function slideInWindow(window, duration)
-	window.Position = UDim2.new(0.5, -window.AbsoluteSize.X/2, 1, 0)
+-- SLIDE ANIMATION
+local function slideInWindow(window)
+	window.Position = UDim2.new(0.5,-225,1,0)
 	window.Visible = true
-	local targetPos = UDim2.new(0.5, -window.AbsoluteSize.X/2, 0.5, -window.AbsoluteSize.Y/2)
-	tween(window, {Position = targetPos}, duration or 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out):Play()
+	tween(window,{Position=UDim2.new(0.5,-225,0.5,-150)},0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
 end
 
-local function slideOutWindow(window, duration)
-	local targetPos = UDim2.new(0.5, -window.AbsoluteSize.X/2, 1, 0)
-	local t = tween(window, {Position = targetPos}, duration or 0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local function slideOutWindow(window)
+	local t = tween(window,{Position=UDim2.new(0.5,-225,1,0)},0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.In)
 	t:Play()
-	t.Completed:Connect(function() window.Visible = false end)
+	t.Completed:Once(function() window.Visible=false end)
 end
 
--- Window creation
+-- WINDOW CREATION
 local function createWindow(title)
-	local Window = createRoundedFrame(UI, UDim2.new(0,450,0,300), UDim2.new(0.5,-225,1,0), Color3.fromRGB(0,0,0), 0.15, UDim.new(0,10))
-	Window.Visible = false
+	local Window = createRoundedFrame(UI,UDim2.new(0,450,0,300),UDim2.new(0.5,-225,1,0),WINDOW_BG_COLOR,0.15)
+	Window.Visible=false
 
 	-- Title Bar
-	local TitleBar = createRoundedFrame(Window, UDim2.new(1,0,0,30), UDim2.new(0,0,0,0), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,0))
-	local TitleLabel = Instance.new("TextLabel")
-	TitleLabel.Size = UDim2.new(1,-50,1,0)
-	TitleLabel.Position = UDim2.new(0,10,0,0)
-	TitleLabel.BackgroundTransparency = 1
-	TitleLabel.Text = title
-	TitleLabel.TextColor3 = TEXT_COLOR
-	TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-	TitleLabel.Font = Enum.Font.SourceSansBold
-	TitleLabel.TextSize = 18
-	TitleLabel.Parent = TitleBar
+	local TitleBar = createRoundedFrame(Window,UDim2.new(1,0,0,30),UDim2.new(0,0,0,0),Color3.fromRGB(20,20,20),0.15,UDim.new(0,0))
+	local Title = Instance.new("TextLabel",TitleBar)
+	Title.Size=UDim2.new(1,-40,1,0)
+	Title.Position=UDim2.new(0,10,0,0)
+	Title.BackgroundTransparency=1
+	Title.Text=title
+	Title.Font=Enum.Font.SourceSansBold
+	Title.TextSize=18
+	Title.TextColor3=TEXT_COLOR
+	Title.TextXAlignment=Enum.TextXAlignment.Left
 
-	local CloseButton = Instance.new("TextButton")
-	CloseButton.Size = UDim2.new(0,30,0,30)
-	CloseButton.Position = UDim2.new(1,-30,0,0)
-	CloseButton.BackgroundTransparency = 1
-	CloseButton.Text = "X"
-	CloseButton.TextColor3 = TEXT_COLOR
-	CloseButton.Font = Enum.Font.SourceSansBold
-	CloseButton.TextSize = 18
-	CloseButton.Parent = TitleBar
-	CloseButton.MouseButton1Click:Connect(function()
-		slideOutWindow(Window, 0.5)
+	local Close = Instance.new("TextButton",TitleBar)
+	Close.Size=UDim2.new(0,30,0,30)
+	Close.Position=UDim2.new(1,-30,0,0)
+	Close.BackgroundTransparency=1
+	Close.Text="X"
+	Close.Font=Enum.Font.SourceSansBold
+	Close.TextSize=18
+	Close.TextColor3=TEXT_COLOR
+	Close.MouseButton1Click:Connect(function()
+		slideOutWindow(Window)
 	end)
 
-	makeDraggable(Window, TitleBar)
+	makeDraggable(Window,TitleBar)
 
 	-- Tabs
-	local TabsFrame = Instance.new("Frame")
-	TabsFrame.Size = UDim2.new(1,0,0,30)
-	TabsFrame.Position = UDim2.new(0,0,0,30)
-	TabsFrame.BackgroundTransparency = 1
-	TabsFrame.Parent = Window
+	local TabsFrame = createRoundedFrame(Window,UDim2.new(1,0,0,30),UDim2.new(0,0,0,30),Color3.fromRGB(0,0,0),1)
+	local TabsScrolling = Instance.new("ScrollingFrame")
+	TabsScrolling.Size = UDim2.new(1,0,1,0)
+	TabsScrolling.BackgroundTransparency = 1
+	TabsScrolling.ScrollBarThickness = 6
+	TabsScrolling.Parent = TabsFrame
+	TabsScrolling.CanvasSize = UDim2.new(0,0,0,0)
+	local tabsLayout = Instance.new("UIListLayout",TabsScrolling)
+	tabsLayout.FillDirection = Enum.FillDirection.Horizontal
+	tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+	tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+	tabsLayout.Padding = UDim.new(0,10)
 
-	local Tabs = {}
+	-- WHITE UNDERLINE BAR
+	local Underline = createRoundedFrame(TabsFrame,UDim2.new(0,0,0,2),UDim2.new(0,0,1,-2),Color3.fromRGB(255,255,255),0,UDim.new(0,0))
+
 	local CurrentTabContent
-	local Underline = createRoundedFrame(TabsFrame, UDim2.new(0,50,0,2), UDim2.new(0,0,1,-2), TEXT_COLOR, 0, UDim.new(0,1))
+	local Tabs = {}
 
 	local function addTab(name)
 		local tabButton = Instance.new("TextButton")
 		tabButton.Size = UDim2.new(0,100,1,0)
-		tabButton.Position = UDim2.new(#Tabs*0.22,10,0,0)
 		tabButton.BackgroundTransparency = 1
 		tabButton.Text = name
-		tabButton.TextColor3 = TEXT_COLOR
 		tabButton.Font = Enum.Font.SourceSans
 		tabButton.TextSize = 16
-		tabButton.Parent = TabsFrame
+		tabButton.TextColor3 = TEXT_COLOR
+		tabButton.Parent = TabsScrolling
 
 		local tabContent = Instance.new("ScrollingFrame")
 		tabContent.Size = UDim2.new(1,0,1,-60)
@@ -163,11 +149,9 @@ local function createWindow(title)
 		tabContent.VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar
 		tabContent.Parent = Window
 
-		local layout = Instance.new("UIListLayout")
+		local layout = Instance.new("UIListLayout", tabContent)
 		layout.SortOrder = Enum.SortOrder.LayoutOrder
 		layout.Padding = UDim.new(0,10)
-		layout.Parent = tabContent
-
 		layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 			tabContent.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y + 10)
 		end)
@@ -177,31 +161,39 @@ local function createWindow(title)
 			tabContent.Visible = true
 			CurrentTabContent = tabContent
 
-			local textSize = tabButton.TextBounds.X
-			local tabCenter = tabButton.AbsolutePosition.X + tabButton.AbsoluteSize.X/2
-			local newPos = tabCenter - textSize/2 - TabsFrame.AbsolutePosition.X
-			local newSize = UDim2.new(0,textSize,0,2)
-			tween(Underline, {Position = UDim2.new(0,newPos,1,-2); Size=newSize}, 0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out):Play()
+			-- Move underline
+			task.defer(function()
+				local textWidth = tabButton.TextBounds.X
+				local relativeX = tabButton.Position.X.Offset + (tabButton.Size.X.Offset - textWidth)/2
+				tween(Underline,{
+					Position = UDim2.new(0, relativeX, 1, -2),
+					Size = UDim2.new(0, textWidth, 0, 2)
+				},0.25,Enum.EasingStyle.Quad,Enum.EasingDirection.Out):Play()
+			end)
 		end
 
 		tabButton.MouseButton1Click:Connect(activateTab)
 		table.insert(Tabs, tabButton)
-		if #Tabs == 1 then activateTab() end
 
+		if #Tabs == 1 then
+			task.wait()
+			activateTab()
+		end
+
+		TabsScrolling.CanvasSize = UDim2.new(0, (#Tabs)*(tabButton.Size.X.Offset + 10),0,0)
 		return tabContent
 	end
 
-	table.insert(Windows,Window)
-	return Window, addTab
+	return Window, addTab, Underline
 end
 
--- Notifications
+-- NOTIFICATIONS
 local NotificationFolder = Instance.new("Folder")
 NotificationFolder.Name = "Notifications"
 NotificationFolder.Parent = UI
 
 local function showNotification(text,duration)
-	local notif = createRoundedFrame(NotificationFolder, UDim2.new(0,300,0,60), UDim2.new(1,-10,1,-10), Color3.fromRGB(0,0,0), 0.15, UDim.new(0,10))
+	local notif = createRoundedFrame(NotificationFolder, UDim2.new(0,300,0,60), UDim2.new(1,-10,1,-10), Color3.fromRGB(0,0,0), 0.25, UDim.new(0,10))
 	notif.AnchorPoint = Vector2.new(1,1)
 	notif.ClipsDescendants = true
 
@@ -243,16 +235,16 @@ local function showNotification(text,duration)
 	end)
 end
 
--- Toggle (mobile-friendly)
-local function createToggle(parent, labelText, defaultState, callback)
+-- TOGGLE
+local function createToggle(parent,labelText,defaultState,callback)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
 	frame.BackgroundTransparency = 1
 	frame.Parent = parent
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.6,0,1,0)
-	label.Position = UDim2.new(0,15,0,0)
+	label.Size = UDim2.new(0,100,1,0)
+	label.Position = UDim2.new(0,10,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -261,7 +253,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 	label.TextSize = 16
 	label.Parent = frame
 
-	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(1,-65,0.5,-12), SLIDER_BG_COLOR, 0, UDim.new(0,12))
+	local toggleFrame = createRoundedFrame(frame, UDim2.new(0,50,0,25), UDim2.new(0,115,0.5,-12), TOGGLE_BG_COLOR, 0, UDim.new(0,12))
 	local toggleCircle = createRoundedFrame(toggleFrame, UDim2.new(0,21,0,21), UDim2.new(defaultState and 1 or 0,0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
 	toggleCircle.AnchorPoint = Vector2.new(defaultState and 1 or 0,0.5)
 
@@ -287,7 +279,7 @@ local function createToggle(parent, labelText, defaultState, callback)
 	return frame
 end
 
--- Slider (mobile-friendly)
+-- SLIDER
 local function createSlider(parent,labelText,min,max,default)
 	local frame = Instance.new("Frame")
 	frame.Size = UDim2.new(1,-20,0,40)
@@ -295,8 +287,8 @@ local function createSlider(parent,labelText,min,max,default)
 	frame.Parent = parent
 
 	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(0.35,0,1,0)
-	label.Position = UDim2.new(0,15,0,0)
+	label.Size = UDim2.new(0,100,1,0)
+	label.Position = UDim2.new(0,10,0,0)
 	label.BackgroundTransparency = 1
 	label.Text = labelText
 	label.TextColor3 = TEXT_COLOR
@@ -306,8 +298,8 @@ local function createSlider(parent,labelText,min,max,default)
 	label.Parent = frame
 
 	local valueLabel = Instance.new("TextLabel")
-	valueLabel.Size = UDim2.new(0.15,0,1,0)
-	valueLabel.Position = UDim2.new(0.8,0,0,0)
+	valueLabel.Size = UDim2.new(0,50,1,0)
+	valueLabel.Position = UDim2.new(1,-60,0,0)
 	valueLabel.BackgroundTransparency = 1
 	valueLabel.TextColor3 = TEXT_COLOR
 	valueLabel.Font = Enum.Font.SourceSans
@@ -316,13 +308,12 @@ local function createSlider(parent,labelText,min,max,default)
 	valueLabel.TextXAlignment = Enum.TextXAlignment.Right
 	valueLabel.Parent = frame
 
-	local sliderBar = createRoundedFrame(frame, UDim2.new(0.5,0,0.3,0), UDim2.new(0.4,0,0.35,0), SLIDER_BG_COLOR,0, UDim.new(0,4))
+	local sliderBar = createRoundedFrame(frame,UDim2.new(0.5,0,0.3,0),UDim2.new(0,115,0.35,0),SLIDER_BG_COLOR,0,UDim.new(0,4))
 	local knobSize = 12
-	local sliderKnob = createRoundedFrame(sliderBar, UDim2.new(0,knobSize,0,knobSize), UDim2.new((default-min)/(max-min),0,0.5,0), SLIDER_COLOR,0, UDim.new(1,0))
+	local sliderKnob = createRoundedFrame(sliderBar,UDim2.new(0,knobSize,0,knobSize),UDim2.new((default-min)/(max-min),0,0.5,0),SLIDER_COLOR,0,UDim.new(1,0))
 	sliderKnob.AnchorPoint = Vector2.new(0.5,0.5)
 
 	local dragging=false
-
 	local function updateSlider(inputPosX)
 		local relative = math.clamp((inputPosX-sliderBar.AbsolutePosition.X)/sliderBar.AbsoluteSize.X,0,1)
 		TweenService:Create(sliderKnob,TweenInfo.new(0.1,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Position=UDim2.new(relative,0,0.5,0)}):Play()
@@ -340,7 +331,6 @@ local function createSlider(parent,labelText,min,max,default)
 			updateSlider(input.Position.X)
 		end
 	end)
-
 	local function mobileDrag(input)
 		if input.UserInputType == Enum.UserInputType.Touch then
 			updateSlider(input.Position.X)
@@ -350,48 +340,45 @@ local function createSlider(parent,labelText,min,max,default)
 	sliderBar.InputChanged:Connect(mobileDrag)
 end
 
--- Left-side toggle button
-local function createToggleButton(window)
-	local button = createRoundedFrame(UI, UDim2.new(0,40,0,100), UDim2.new(0,0,0.5,-50), Color3.fromRGB(20,20,20), 0.15, UDim.new(0,10))
-	local label = Instance.new("TextLabel")
-	label.Size = UDim2.new(1,0,1,0)
-	label.Position = UDim2.new(0,0,0,0)
-	label.BackgroundTransparency = 1
-	label.Text = "☰"
-	label.TextColor3 = TEXT_COLOR
-	label.Font = Enum.Font.SourceSansBold
-	label.TextSize = 24
-	label.Parent = button
-	label.TextScaled = true
+-- BIG BLUE "B" BUTTON
+local OpenButton = Instance.new("TextLabel")
+OpenButton.Size = UDim2.new(0,60,0,60)
+OpenButton.Position = UDim2.new(0,10,0.5,0)
+OpenButton.BackgroundTransparency = 1
+OpenButton.Text = "B"
+OpenButton.TextColor3 = BLUEWARE_BLUE
+OpenButton.Font = Enum.Font.SourceSansBold
+OpenButton.TextSize = 50
+OpenButton.Parent = UI
+OpenButton.AnchorPoint = Vector2.new(0,0.5)
+makeDraggable(OpenButton,OpenButton)
 
-	makeDraggable(button, button)
+local opened=false
 
-	local uiVisible = false
-	button.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-			uiVisible = not uiVisible
-			if uiVisible then
-				slideInWindow(window, 0.5)
-			else
-				slideOutWindow(window, 0.5)
-			end
-		end
-	end)
-end
+-- CREATE WINDOW AND DEMO TABS
+local win, addTab, underline = createWindow("BlueWare")
 
--- =================== Demo Usage ===================
-local win, addTab = createWindow("Demo Window")
-createToggleButton(win)
+OpenButton.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		opened = not opened
+		if opened then slideInWindow(win) else slideOutWindow(win) end
+	end
+end)
 
+-- DEMO TABS
 local tab1 = addTab("Main")
 local tab2 = addTab("Misc")
 local tab3 = addTab("Settings")
 
-createSlider(tab1,"Volume",0,100,50)
-createToggle(tab1,"Enable Feature",false,function(state) showNotification("Feature is "..(state and "ON" or "OFF"),3) end)
+-- 10 Test Toggles on Main
+for i=1,10 do
+	createToggle(tab1,"Toggle "..i,false,function(state) showNotification("Toggle "..i.." "..(state and "ON" or "OFF"),2) end)
+end
 
+-- Sliders and Toggles on other tabs
 createSlider(tab2,"Brightness",0,100,75)
-createToggle(tab2,"Misc Toggle",true,function(state) showNotification("Misc Toggle "..(state and "ON" or "OFF"),3) end)
-
+createToggle(tab2,"Misc Toggle",true,function(state) showNotification("Misc Toggle "..(state and "ON" or "OFF"),2) end)
 createSlider(tab3,"Sensitivity",1,10,5)
-createToggle(tab3,"Settings Toggle",false,function(state) showNotification("Settings Toggle "..(state and "ON" or "OFF"),3) end)
+createToggle(tab3,"Settings Toggle",false,function(state) showNotification("Settings Toggle "..(state and "ON" or "OFF"),2) end)
+
+showNotification("BlueWare Loaded",3)
